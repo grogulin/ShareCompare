@@ -7,15 +7,26 @@
 
 import SwiftUI
 
+
+
 struct ContentView: View {
+    let apiKey = "A0WDSRUSNYSK2H4M"
+    
+    @State private var sharesList = [ListingStatus]()
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundColor(.accentColor)
-            Text("Hello, world!")
+        NavigationView {
+            List {
+                NavigationLink {
+                    StockSelectionView()
+                } label: {
+                    Text("Select stocks")
+                }
+            }
+            .navigationTitle("ShareCompare")
         }
-        .padding()
+        
+        
     }
 }
 
