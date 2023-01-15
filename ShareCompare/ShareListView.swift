@@ -8,7 +8,7 @@
 import SwiftUI
 
 
-struct ListingStatus: Codable, Identifiable {
+struct ListingStatus: Codable, Identifiable, Equatable {
     let id: String
     let symbol: String
     let name: String
@@ -34,11 +34,10 @@ struct ListingStatus: Codable, Identifiable {
 
 struct SharesListView: View {
     var sharesList: [ListingStatus]
-    @Binding public var portfolioList: [ListingStatus]
+    @State public var portfolioList = [ListingStatus]()
     
     
     var body: some View {
-        
         List(sharesList) { share in
             HStack {
                 VStack(alignment: .leading) {

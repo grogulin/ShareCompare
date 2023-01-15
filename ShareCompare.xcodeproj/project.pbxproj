@@ -14,6 +14,8 @@
 		A45753BB29709CB9005EA62C /* ShareListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45753BA29709CB9005EA62C /* ShareListView.swift */; };
 		A45753BD29709FF8005EA62C /* LoadingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45753BC29709FF8005EA62C /* LoadingIndicator.swift */; };
 		A45753BF2970ADBC005EA62C /* StockSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45753BE2970ADBC005EA62C /* StockSelectionView.swift */; };
+		A45753C129730C98005EA62C /* SetProportionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45753C029730C98005EA62C /* SetProportionsView.swift */; };
+		A45753C5297336D7005EA62C /* CompareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45753C4297336D7005EA62C /* CompareView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +27,8 @@
 		A45753BA29709CB9005EA62C /* ShareListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareListView.swift; sourceTree = "<group>"; };
 		A45753BC29709FF8005EA62C /* LoadingIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingIndicator.swift; sourceTree = "<group>"; };
 		A45753BE2970ADBC005EA62C /* StockSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StockSelectionView.swift; sourceTree = "<group>"; };
+		A45753C029730C98005EA62C /* SetProportionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetProportionsView.swift; sourceTree = "<group>"; };
+		A45753C4297336D7005EA62C /* CompareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompareView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,8 +63,10 @@
 			children = (
 				A45753AC29708A40005EA62C /* ShareCompareApp.swift */,
 				A45753AE29708A40005EA62C /* ContentView.swift */,
+				A45753C4297336D7005EA62C /* CompareView.swift */,
 				A45753BE2970ADBC005EA62C /* StockSelectionView.swift */,
 				A45753BC29709FF8005EA62C /* LoadingIndicator.swift */,
+				A45753C029730C98005EA62C /* SetProportionsView.swift */,
 				A45753BA29709CB9005EA62C /* ShareListView.swift */,
 				A45753B029708A42005EA62C /* Assets.xcassets */,
 				A45753B229708A42005EA62C /* Preview Content */,
@@ -147,9 +153,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				A45753BD29709FF8005EA62C /* LoadingIndicator.swift in Sources */,
+				A45753C129730C98005EA62C /* SetProportionsView.swift in Sources */,
 				A45753AF29708A40005EA62C /* ContentView.swift in Sources */,
 				A45753BB29709CB9005EA62C /* ShareListView.swift in Sources */,
 				A45753BF2970ADBC005EA62C /* StockSelectionView.swift in Sources */,
+				A45753C5297336D7005EA62C /* CompareView.swift in Sources */,
 				A45753AD29708A40005EA62C /* ShareCompareApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
