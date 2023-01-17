@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Charts
 
 struct MetaData: Codable {
     var id = UUID()
@@ -33,6 +34,7 @@ struct DayData: Codable, Identifiable {
     let adjustedClose: String
     let volume: String
     let dividendAmount: String
+    let splitCoefficient: String
     
     private enum CodingKeys : String, CodingKey {
         case open = "1. open"
@@ -42,6 +44,7 @@ struct DayData: Codable, Identifiable {
         case adjustedClose = "5. adjusted close"
         case volume = "6. volume"
         case dividendAmount = "7. dividend amount"
+        case splitCoefficient = "8. split coefficient"
     }
 }
 
@@ -55,68 +58,154 @@ struct StockData: Codable {
     }
 }
 
+struct AssetProp: Equatable {
+    let share: Double
+    var result: Double
+}
+
+struct AssetResult: Identifiable {
+    var id = UUID()
+    let ticker: String
+    let share: Double
+    let result: Double
+}
+
 
 struct CompareView: View {
     @State private var loadingStatus = ""
     @State var stockData: StockData?
     @State var filteredStockData = [String: DayData]()
     
-    let apiKey = "A0WDSRUSNYSK2H4M"
     
+    let portfolio: [String: Double]
+    let dateStartString: String
+    let compareTo: String
     
-    let testJSON = """
-{
-    "Meta Data": {
-        "1. Information": "Daily Time Series with Splits and Dividend Events",
-        "2. Symbol": "AAPL",
-        "3. Last Refreshed": "2023-01-13",
-        "4. Output Size": "Full size",
-        "5. Time Zone": "US/Eastern"
-    },
-    "Time Series (Daily)": {
-        "2023-01-13": {
-            "1. open": "130.2800",
-            "2. high": "134.9200",
-            "3. low": "124.1700",
-            "4. close": "134.7600",
-            "5. adjusted close": "134.7600",
-            "6. volume": "703283811",
-            "7. dividend amount": "0.0000"
-        },
-        "2022-12-30": {
-            "1. open": "148.2100",
-            "2. high": "150.9199",
-            "3. low": "125.8700",
-            "4. close": "129.9300",
-            "5. adjusted close": "129.9300",
-            "6. volume": "1675731304",
-            "7. dividend amount": "0.1667"
+    @State private var comparison = [String: AssetProp]()
+    
+    @State private var assetResults = [String: AssetProp]()
+    var totalResult: Double {
+        var result = 0.0
+        print(assetResults.keys)
+        
+        for asset in assetResults.keys {
+            result += assetResults[asset]!.result * assetResults[asset]!.share
         }
+        
+        return round(result*1000.0) / 1000.0
     }
-}
-"""
-
+    var resultsList: [AssetResult] {
+        var result = [AssetResult]()
+        
+        for asset in assetResults.keys {
+            let assetResult = round(assetResults[asset]!.result*1000.0) / 1000.0
+            result.append(AssetResult(ticker: asset, share: assetResults[asset]!.share, result: assetResult))
+        }
+        
+        result = result.sorted { $0.share > $1.share }
+        
+        return result
+    }
     
-    func get_max_date(data: [String: DayData]) -> Double {
+    let apiKey = "A0WDSRUSNYSK2H4M"
+ 
+    func getPrice (for date: String, data: [String: DayData], closePrice: Bool) -> Double {
+        guard let day = data[date] else {
+            fatalError("Values for \(date) were not found in data")
+        }
+        
+        guard let doublePrice = Double(closePrice ? day.close : day.open) else {
+            fatalError("Can not transform \(closePrice ? day.close : day.open) to Double")
+        }
+        
+        guard let splitCoefficient = Double(day.splitCoefficient) else {
+            fatalError("Can not transform \(day.splitCoefficient) to Double")
+        }
+        
+        let result = doublePrice*splitCoefficient
+        
+        return result
+    }
+    
+    func getLastClose(data: [String: DayData]) -> Double {
         let dates = data.keys.sorted(by: >)
         let lastDate = dates[0]
-        print("Getting close price for \(lastDate)")
         
-        guard let lastDay = data[lastDate] else {
-            fatalError("Close price for \(lastDate) was not found in data")
-        }
+        let result = getPrice(for: lastDate, data: data, closePrice: true)
         
-        guard let lastClose = Double(lastDay.close) else {
-            fatalError("Can not transform \(lastDay.close) to Double")
-        }
-        
-        print(lastClose)
-        
-        return lastClose
+//        print("Close price for \(lastDate): \(result)")
+        return result
     }
     
-    func get_current_price(ticker: String, apiKey: String) async {
-        print("Started loading...")
+    func getFirstOpen(data: [String: DayData]) -> Double {
+        let dates = data.keys.sorted(by: <)
+        let firstDate = dates[0]
+        
+        let result = getPrice(for: firstDate, data: data, closePrice: false)
+        
+//        print("Open price for \(firstDate): \(result)")
+        return result
+    }
+    
+    func getDividendsAmount(data: [String: DayData]) -> Double {
+        var result = 0.0
+        
+        for day in data.keys.sorted() {
+            guard let divAmount = Double(data[day]!.dividendAmount) else {
+                fatalError("Can not transform \(data[day]!.dividendAmount) into Double")
+            }
+            if divAmount > 0 {
+//                print("Dividends for \(day): \(divAmount)")
+                result += divAmount
+            }
+        }
+        
+//        print("Total dividends payed since \(dateStartString) is: \(result)")
+        return result
+    }
+    
+    func getSplitAmount( data: [String: DayData]) -> Double {
+        var result = 1.0
+        
+        for day in data.keys.sorted() {
+            guard let splitAmount = Double(data[day]!.splitCoefficient) else {
+                fatalError("Can not transform \(data[day]!.splitCoefficient) into Double")
+            }
+            if splitAmount > 0 {
+//                print("For \(day) split was \(splitAmount)")
+                result *= splitAmount
+            }
+        }
+        return result
+    }
+    
+    func getPortfolioResult() {
+        Task {
+            await getData(for: compareTo, apiKey: apiKey, forComparison: true)
+        }
+        print(assetResults.keys)
+        loadingStatus = "Loading"
+        
+        for asset in assetResults.keys {
+            Task {
+                print("Starting procedure for \(asset)")
+                await getData(for: asset, apiKey: apiKey, forComparison: false)
+    
+                
+//                totalResult += assetResults[asset]!.result!*assetResults[asset]!.share
+//                print("Total result: \(totalResult)")
+            }
+            
+            
+        }
+        
+        
+        loadingStatus = "Finished"
+    }
+    
+    
+    func getData(for ticker: String, apiKey: String, forComparison: Bool) async {
+//        print("Started loading...")
         withAnimation {
             loadingStatus = "Loading"
         }
@@ -136,12 +225,32 @@ struct CompareView: View {
                     self.stockData = stockData
                     
                     for date in stockData.timeSeriesDaily.keys {
-                        filteredStockData[date] = stockData.timeSeriesDaily[date]!
+                        if date >= dateStartString {
+                            filteredStockData[date] = stockData.timeSeriesDaily[date]!
+                        }
                     }
                     
-                    print("Finished loading...")
+                    let lastClosePrice = getLastClose(data: filteredStockData)
+                    let divAmount = getDividendsAmount(data: filteredStockData)
+                    let startOpenPrice = getFirstOpen(data: filteredStockData)
+                    let splitAmount = getSplitAmount(data: filteredStockData)
                     
-                    get_max_date(data: filteredStockData)
+//                    print("Start open price: \(startOpenPrice). Div: \(divAmount). Last close: \(lastClosePrice). Split Amount: \(splitAmount)")
+                    let totalReturn: Double = (lastClosePrice+divAmount)*splitAmount/startOpenPrice
+                    print("\(ticker): for the period from \(dateStartString) to \(Date()): \(totalReturn)")
+                    let share = forComparison ? 1.0 : assetResults[ticker]!.share
+                    
+                    print("Total return for \(ticker): \(totalReturn)")
+                    
+                    withAnimation {
+                        if forComparison {
+                            let totalReturnRounded = round(totalReturn*1000)/1000
+                            
+                            comparison[ticker] = AssetProp(share: share, result: totalReturnRounded)
+                        } else {
+                            assetResults[ticker] = AssetProp(share: share, result: totalReturn)
+                        }
+                    }
                 }
             } catch {
                 print("Error decoding JSON: \(error)")
@@ -153,31 +262,67 @@ struct CompareView: View {
         }
         
     }
+    
+    func getBarMark(name: String, value: Double, customColor: Color?) -> some ChartContent {
+        return BarMark(
+            x: .value("Asset", name),
+            y: .value("gain (%)", value)
+        )
+        .annotation(position: .top, alignment: .center) {
+            Text("\(value.formatted(.percent))")
+                .font(.footnote)
+        }
+        .foregroundStyle(
+            customColor ?? (value >= 0 ? Color.green : Color.red)
+        )
+    }
+    
+    
+    
+    
     var body: some View {
         VStack {
-            Text("Here will be comparing view for our selected assets according to the selected horizon")
-                .navigationTitle("Benchmarking")
-                .navigationBarTitleDisplayMode(.inline)
-                .padding()
-            
-            Button("Test") {
-//                guard let data = testJSON.data(using: .utf8) else {
-//                    print("Failed to convert JSON to Data")
-//                    return
-//                }
-//
-//                guard let decoded = try? JSONDecoder().decode(StockData.self, from: data) else {
-//                    print("Failed to decode JSON")
-//                    return
-//                }
-                
-                Task {
-                    await get_current_price(ticker: "AAPL", apiKey: apiKey)
+            if loadingStatus == "Loading" {
+                LoadingIndicator(title: "Estimating Total Return for your portfolio...")
+            } else {
+                List {
+                    Text("Return by asset")
+                        .font(.system(.largeTitle, weight: .bold))
+                    Chart {
+                        getBarMark(name: compareTo, value: (comparison[compareTo, default: AssetProp(share: 1.0, result: 0.0)].result - 1.0), customColor: .orange)
+                        getBarMark(name: "Total", value: (totalResult - 1.0), customColor: nil)
+                        ForEach(resultsList) { result in
+                            getBarMark(name: result.ticker, value: (result.result - 1.0), customColor: nil)
+                        }
+                    }
+                    
+                    Text("Return by asset and weight")
+                        .font(.system(.largeTitle, weight: .bold))
+                    Chart {
+                        getBarMark(name: compareTo, value: (comparison[compareTo, default: AssetProp(share: 1.0, result: 0.0)].result - 1.0), customColor: .orange)
+                        getBarMark(name: "Total", value: (totalResult - 1.0), customColor: nil)
+                        ForEach(resultsList) { result in
+                            getBarMark(name: result.ticker, value: ((result.result - 1.0) * result.share), customColor: nil)
+                        }
+                        
+                    }
+                    
                 }
                 
-                
-                
             }
+            
+        }
+        .navigationTitle("Benchmarking")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            for ticker in portfolio.keys {
+                assetResults[ticker] = AssetProp(share: portfolio[ticker]!, result: 0.0)
+            }
+            
+            comparison[compareTo] = AssetProp(share: 1.0, result: 0.0)
+            print(comparison)
+            
+            getPortfolioResult()
             
         }
     }
@@ -185,6 +330,6 @@ struct CompareView: View {
 
 struct CompareView_Previews: PreviewProvider {
     static var previews: some View {
-        CompareView()
+        CompareView(portfolio: ["AAPL": 1.0], dateStartString: "2022-10-30", compareTo: "QQQ")
     }
 }
